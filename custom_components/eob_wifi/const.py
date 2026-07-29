@@ -90,8 +90,8 @@ ATTR_IS_ANALOG_MODE = "isAnalogMode"
 
 
 def _is_analog_mode(device: dict) -> bool:
-    therm_data = device.get("thermData") or {}
-    return bool(therm_data.get(ATTR_IS_ANALOG_MODE))
+    therm_data = device.get("thermData")
+    return bool(therm_data.get(ATTR_IS_ANALOG_MODE)) if isinstance(therm_data, dict) else False
 
 MODE_AUTO = "auto"
 MODE_MANU = "manu"
