@@ -141,6 +141,16 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
 
         LOGGER.debug("MQTT state for device %s: %s", device.get("name"), device["mqttState"])
 
+        key_01 = (0x30 << 8) | 0x01
+        payload = mqtt_state.get(key_01)
+        if payload and len(payload) >= 1:
+            device.setdefault("deviceData", {})["isSwitchedOn"] = bool(payload[0])
+
+        key_02 = (0x30 << 8) | 0x02
+        payload = mqtt_state.get(key_02)
+        if payload and len(payload) >= 1:
+            device.setdefault("thermSettings", {})["isAuto"] = payload[0] == 1
+
         key_0b = (0x30 << 8) | 0x0B
         payload = mqtt_state.get(key_0b)
         if payload and len(payload) >= 2:
