@@ -143,10 +143,14 @@ class DeviceMqttClient:
         if rc == 0:
             client.subscribe(self._sub_topic)
             self._connected.set()
-            LOGGER.info("MQTT connected for device %s", self._device_id)
+            LOGGER.info(
+                "MQTT connected for device %s (topic: %s)",
+                self._device_id, self._sub_topic
+            )
         else:
             LOGGER.error(
-                "MQTT connection failed for device %s: rc=%d", self._device_id, rc
+                "MQTT connection failed for device %s: rc=%d",
+                self._device_id, rc
             )
 
     def _on_disconnect(self, client, userdata, rc) -> None:
@@ -155,6 +159,14 @@ class DeviceMqttClient:
 
     def _on_message(self, client, userdata, msg) -> None:
         data = bytes(msg.payload)
+        LOGGER.debug(
+            "MQTT message for device %s: type=0x%02X%02X msgId=%d len=%d payload=%s",
+            self._device_id, data[0] if len(data) > 0 else 0,
+            data[1] if len(data) > 1 else 0,
+            (data[2] << 8 | data[3]) if len(data) > 3 else 0,
+            len(data),
+            data.hex() if len(data) > 0 else ""
+        )
         if len(data) < 6:
             return
         msg_id = (data[2] << 8) | data[3]
@@ -170,7 +182,12 @@ class DeviceMqttClient:
         )
         self._client.connect_async(MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_KEEPALIVE)
         self._client.loop_start()
-        LOGGER.info("MQTT client starting for device %s", self._device_id)
+        for attempt in range(30):
+            if self._connected.is_set():
+                LOGGER.info("MQTT connected for device %s", self._device_id)
+                return
+            await asyncio.sleep(0.1)
+        LOGGER.warning("MQTT connection timeout for device %s", self._device_id)
 
     async def disconnect(self) -> None:
         self._client.loop_stop()
