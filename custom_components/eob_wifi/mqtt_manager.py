@@ -116,7 +116,6 @@ class DeviceMqttClient:
             client_id=_generate_client_id(),
             transport="websockets",
         )
-        self._client.tls_set()
         self._client.ws_set_options(path=MQTT_BROKER_WS_PATH)
         self._client.username_pw_set(self._username, self._mqtt_pass)
         self._client.on_connect = self._on_connect
@@ -166,6 +165,9 @@ class DeviceMqttClient:
             self.hass.loop.call_soon_threadsafe(self._raw_message_callback, data)
 
     async def connect(self) -> None:
+        await self.hass.async_add_executor_job(
+            self._client.tls_set
+        )
         self._client.connect_async(MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_KEEPALIVE)
         self._client.loop_start()
         LOGGER.info("MQTT client starting for device %s", self._device_id)
