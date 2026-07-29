@@ -80,48 +80,66 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_{self._device_id}"
         self._attr_name = device.get("name", f"EOB Thermostat {self._device_id}")
-        self._attr_device_id = self._device_id
+
+    def _get_therm_data(self) -> dict:
+        return self._device.get("thermData") or {}
+
+    def _get_therm_settings(self) -> dict:
+        return self._device.get("thermSettings") or {}
+
+    def _get_device_data(self) -> dict:
+        return self._device.get("deviceData") or {}
 
     @property
     def current_temperature(self) -> float | None:
-        return self._device.get("currentTemperature")
+        return self._get_therm_data().get("actualTemp")
 
     @property
     def target_temperature(self) -> float | None:
-        return self._device.get("desiredTemp")
+        return self._get_therm_data().get("desiredTemp")
 
     @property
     def hvac_mode(self) -> HVACMode | None:
-        mode = self._device.get("mode", MODE_AUTO)
-        return HVAC_MAP.get(mode, HVACMode.AUTO)
+        device_data = self._get_device_data()
+        if device_data.get("isSwitchedOn") is False:
+            return HVACMode.OFF
+        therm = self._get_therm_settings()
+        if therm.get("isAuto") is True:
+            return HVACMode.AUTO
+        return HVACMode.HEAT
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         temp = kwargs.get(ATTR_TEMPERATURE)
         if temp is None:
             return
-        payload = {
-            "deviceId": self._device_id,
-            "desiredTemp": temp,
-            "mode": HVAC_MAP_REVERSE.get(self.hvac_mode, MODE_AUTO),
-        }
-        ok = await self.coordinator.send_command(payload)
+
+        mqtt = self.coordinator.mqtt_manager
+        ok = await mqtt.set_thermostat_temp(self._device_id, temp)
         if ok:
-            self._device["desiredTemp"] = temp
+            therm = self._get_therm_data()
+            therm["desiredTemp"] = temp
             self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         mode = HVAC_MAP_REVERSE.get(hvac_mode, MODE_AUTO)
-        payload: dict[str, Any] = {
-            "deviceId": self._device_id,
-            "mode": mode,
-        }
-        if mode == MODE_MANU:
-            payload["desiredTemp"] = self._device.get(
-                "desiredTemp", 21
-            )
-        ok = await self.coordinator.send_command(payload)
+        mqtt = self.coordinator.mqtt_manager
+
+        if mode == MODE_AUTO:
+            ok = await mqtt.set_device_mode(self._device_id, MODE_AUTO)
+        elif mode == MODE_OFF:
+            ok = await mqtt.set_device_mode(self._device_id, MODE_OFF)
+        else:
+            desired = self._get_therm_data().get("desiredTemp", 21)
+            ok = await mqtt.set_thermostat_temp(self._device_id, desired)
+
         if ok:
-            self._device["mode"] = mode
+            device_data = self._get_device_data()
+            if mode == MODE_OFF:
+                device_data["isSwitchedOn"] = False
+            else:
+                device_data["isSwitchedOn"] = True
+            settings = self._get_therm_settings()
+            settings["isAuto"] = mode == MODE_AUTO
             self.async_write_ha_state()
 
 
@@ -139,17 +157,19 @@ class EOBSwitch(CoordinatorEntity, ClimateEntity):
         self._attr_unique_id = f"eob_wifi_{self._device_id}"
         self._attr_name = device.get("name", f"EOB Switch {self._device_id}")
 
+    def _get_device_data(self) -> dict:
+        return self._device.get("deviceData") or {}
+
     @property
     def hvac_mode(self) -> HVACMode | None:
-        is_on = self._device.get("isOutputOn", False)
+        is_on = self._get_device_data().get("isSwitchedOn", False)
         return HVACMode.HEAT if is_on else HVACMode.OFF
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        payload = {
-            "deviceId": self._device_id,
-            "isOutputOn": hvac_mode == HVACMode.HEAT,
-        }
-        ok = await self.coordinator.send_command(payload)
+        turn_on = hvac_mode == HVACMode.HEAT
+        mqtt = self.coordinator.mqtt_manager
+        ok = await mqtt.set_relay_state(self._device_id, turn_on)
         if ok:
-            self._device["isOutputOn"] = hvac_mode == HVACMode.HEAT
+            device_data = self._get_device_data()
+            device_data["isSwitchedOn"] = turn_on
             self.async_write_ha_state()

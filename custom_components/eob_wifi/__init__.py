@@ -19,6 +19,7 @@ from .const import (
     DEVICE_TYPES_USED_IN_APP,
     LOGGER,
 )
+from .mqtt_manager import MqttManager
 
 PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.SENSOR]
 
@@ -27,7 +28,8 @@ SCAN_INTERVAL = timedelta(seconds=60)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
-    coordinator = EOBWifiCoordinator(hass, entry)
+    mqtt_manager = MqttManager(hass)
+    coordinator = EOBWifiCoordinator(hass, entry, mqtt_manager)
     await coordinator.async_config_entry_first_refresh()
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -35,6 +37,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    coordinator: EOBWifiCoordinator = hass.data[DOMAIN].get(entry.entry_id)
+    if coordinator:
+        await coordinator.mqtt_manager.shutdown()
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -42,7 +47,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class EOBWifiCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, mqtt_manager: MqttManager
+    ) -> None:
         super().__init__(
             hass,
             LOGGER,
@@ -55,6 +62,7 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
         self.auth_token: str | None = None
         self.user_id: int | None = None
         self.devices: list[dict] = []
+        self.mqtt_manager = mqtt_manager
 
     async def _login(self) -> None:
         url = f"{BASE_SERVER_URL}{API_LOGIN}"
@@ -88,10 +96,15 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         devices = await self._fetch_devices()
         self.devices = [
-            d
-            for d in devices
-            if d.get("deviceType") in DEVICE_TYPES_USED_IN_APP
+            d for d in devices if d.get("deviceType") in DEVICE_TYPES_USED_IN_APP
         ]
+        for device in self.devices:
+            device_id = device.get("deviceId")
+            if self.mqtt_manager.get_client(device_id) is None:
+                unique_id = device.get("uniqueIdentifier")
+                mqtt_pass = device.get("mqttPass")
+                if unique_id and mqtt_pass:
+                    await self.mqtt_manager.add_device(device)
         return {"devices": self.devices}
 
     async def send_command(self, device_data: dict) -> bool:
