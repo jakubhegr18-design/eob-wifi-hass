@@ -11,16 +11,19 @@ from homeassistant.components.climate import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
 from .const import (
+    DEVICE_TYPE_NAMES,
     DEVICE_TYPE_TS11_WIFI,
     DEVICE_TYPE_U2,
     DEVICE_TYPE_PT14,
     DEVICE_TYPE_PT14_WIF_ONLY,
     DOMAIN,
+    MANUFACTURER,
     MODE_AUTO,
     MODE_MANU,
     MODE_OFF,
@@ -80,6 +83,14 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_{self._device_id}"
         self._attr_name = device.get("name", f"EOB Thermostat {self._device_id}")
+        dtype = device.get("deviceType")
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, str(self._device_id))},
+            name=device.get("name", f"EOB {self._device_id}"),
+            manufacturer=MANUFACTURER,
+            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
+            sw_version=device.get("firmwareVersionStringFromDevice"),
+        )
 
     def _get_therm_data(self) -> dict:
         return self._device.get("thermData") or {}
@@ -154,8 +165,16 @@ class EOBSwitch(CoordinatorEntity, ClimateEntity):
         super().__init__(coordinator)
         self._device = device
         self._device_id = device.get("deviceId")
-        self._attr_unique_id = f"eob_wifi_{self._device_id}"
+        self._attr_unique_id = f"eob_wifi_switch_{self._device_id}"
         self._attr_name = device.get("name", f"EOB Switch {self._device_id}")
+        dtype = device.get("deviceType")
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, str(self._device_id))},
+            name=device.get("name", f"EOB {self._device_id}"),
+            manufacturer=MANUFACTURER,
+            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
+            sw_version=device.get("firmwareVersionStringFromDevice"),
+        )
 
     def _get_device_data(self) -> dict:
         return self._device.get("deviceData") or {}

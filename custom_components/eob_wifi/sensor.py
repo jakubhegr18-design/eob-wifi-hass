@@ -6,11 +6,12 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
-from .const import DEVICE_TYPE_TS11_WIFI, DEVICE_TYPE_U2, DOMAIN
+from .const import DEVICE_TYPE_NAMES, DEVICE_TYPE_TS11_WIFI, DEVICE_TYPE_U2, DOMAIN, MANUFACTURER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +50,14 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_actual_temp_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Temperature"
+        dtype = device.get("deviceType")
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, str(self._device_id))},
+            name=device.get("name", f"EOB {self._device_id}"),
+            manufacturer=MANUFACTURER,
+            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
+            sw_version=device.get("firmwareVersionStringFromDevice"),
+        )
 
     @property
     def native_value(self) -> float | None:
@@ -68,6 +77,14 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_desired_temp_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Target Temperature"
+        dtype = device.get("deviceType")
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, str(self._device_id))},
+            name=device.get("name", f"EOB {self._device_id}"),
+            manufacturer=MANUFACTURER,
+            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
+            sw_version=device.get("firmwareVersionStringFromDevice"),
+        )
 
     @property
     def native_value(self) -> float | None:
@@ -85,6 +102,14 @@ class EOBFirmwareSensor(CoordinatorEntity, SensorEntity):
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_fw_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Firmware"
+        dtype = device.get("deviceType")
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, str(self._device_id))},
+            name=device.get("name", f"EOB {self._device_id}"),
+            manufacturer=MANUFACTURER,
+            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
+            sw_version=device.get("firmwareVersionStringFromDevice"),
+        )
 
     @property
     def native_value(self) -> str | None:
