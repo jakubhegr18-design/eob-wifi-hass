@@ -1,8 +1,6 @@
 {
   "name": "EOB WiFi",
-  "filename": "eob_wifi.zip",
   "hide_default_branch": false,
   "homeassistant": "2024.1.0",
-  "render_readme": true,
-  "zip_release": true
+  "render_readme": true
 }
