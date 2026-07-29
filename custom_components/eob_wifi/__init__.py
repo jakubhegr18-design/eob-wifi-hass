@@ -21,7 +21,7 @@ from .const import (
 )
 from .mqtt_manager import MqttManager
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
 
 SCAN_INTERVAL = timedelta(seconds=60)
 

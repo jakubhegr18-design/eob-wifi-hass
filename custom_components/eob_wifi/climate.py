@@ -18,15 +18,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import EOBWifiCoordinator
 from .const import (
     DEVICE_TYPE_NAMES,
-    DEVICE_TYPE_TS11_WIFI,
-    DEVICE_TYPE_U2,
-    DEVICE_TYPE_PT14,
-    DEVICE_TYPE_PT14_WIF_ONLY,
     DOMAIN,
     MANUFACTURER,
     MODE_AUTO,
     MODE_MANU,
     MODE_OFF,
+    is_temp_regulation,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,16 +36,6 @@ HVAC_MAP = {
 
 HVAC_MAP_REVERSE = {v: k for k, v in HVAC_MAP.items()}
 
-THERMOSTAT_TYPES = [
-    DEVICE_TYPE_TS11_WIFI,
-    DEVICE_TYPE_U2,
-]
-
-RELAY_TYPES = [
-    DEVICE_TYPE_PT14,
-    DEVICE_TYPE_PT14_WIF_ONLY,
-]
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -58,11 +45,8 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        dtype = device.get("deviceType")
-        if dtype in THERMOSTAT_TYPES:
+        if is_temp_regulation(device):
             entities.append(EOBThermostat(coordinator, device))
-        elif dtype in RELAY_TYPES:
-            entities.append(EOBSwitch(coordinator, device))
     if entities:
         async_add_entities(entities)
 
@@ -93,7 +77,9 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
 
     @property
     def _device(self) -> dict | None:
-        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        if not self.coordinator.data:
+            return None
+        devices = self.coordinator.data.get("devices", [])
         for d in devices:
             if d.get("deviceId") == self._device_id:
                 return d
@@ -167,54 +153,4 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
                 device_data["isSwitchedOn"] = True
             settings = self._get_therm_settings()
             settings["isAuto"] = mode == MODE_AUTO
-            self.async_write_ha_state()
-
-
-class EOBSwitch(CoordinatorEntity, ClimateEntity):
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
-    _attr_supported_features = ClimateEntityFeature(0)
-
-    def __init__(
-        self, coordinator: EOBWifiCoordinator, device: dict
-    ) -> None:
-        super().__init__(coordinator)
-        self._device_id = device.get("deviceId")
-        self._attr_unique_id = f"eob_wifi_switch_{self._device_id}"
-        self._attr_name = device.get("name", f"EOB Switch {self._device_id}")
-        dtype = device.get("deviceType")
-        self._attr_device_info = dr.DeviceInfo(
-            identifiers={(DOMAIN, str(self._device_id))},
-            name=device.get("name", f"EOB {self._device_id}"),
-            manufacturer=MANUFACTURER,
-            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
-            sw_version=device.get("firmwareVersionStringFromDevice"),
-        )
-
-    @property
-    def _device(self) -> dict | None:
-        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
-        for d in devices:
-            if d.get("deviceId") == self._device_id:
-                return d
-        return None
-
-    def _get_device_data(self) -> dict:
-        d = self._device
-        if not d:
-            return {}
-        return d.get("deviceData") or {}
-
-    @property
-    def hvac_mode(self) -> HVACMode | None:
-        is_on = self._get_device_data().get("isSwitchedOn", False)
-        return HVACMode.HEAT if is_on else HVACMode.OFF
-
-    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        turn_on = hvac_mode == HVACMode.HEAT
-        mqtt = self.coordinator.mqtt_manager
-        ok = await mqtt.set_relay_state(self._device_id, turn_on)
-        if ok:
-            device_data = self._get_device_data()
-            device_data["isSwitchedOn"] = turn_on
             self.async_write_ha_state()

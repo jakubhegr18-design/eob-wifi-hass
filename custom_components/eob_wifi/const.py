@@ -88,6 +88,16 @@ ATTR_DEVICE_TYPE = "device_type"
 ATTR_FIRMWARE = "firmware"
 ATTR_ADMIN_ID = "admin_id"
 ATTR_DEVICE_VARIANT = "device_variant"
+ATTR_IS_ANALOG_MODE = "is_analog_mode"
+
+
+def is_temp_regulation(device: dict) -> bool:
+    therm_data = device.get("thermData") or {}
+    is_analog = therm_data.get("isAnalogMode")
+    if is_analog is not None:
+        return bool(is_analog)
+    dtype = device.get("deviceType")
+    return dtype in DEVICE_TYPE_THERMOSTATS
 
 MODE_AUTO = "auto"
 MODE_MANU = "manu"

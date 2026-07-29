@@ -11,14 +11,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
-from .const import DEVICE_TYPE_NAMES, DEVICE_TYPE_TS11_WIFI, DEVICE_TYPE_U2, DOMAIN, MANUFACTURER
+from .const import DEVICE_TYPE_NAMES, DOMAIN, MANUFACTURER, is_temp_regulation
 
 _LOGGER = logging.getLogger(__name__)
-
-THERMOSTAT_TYPES = [
-    DEVICE_TYPE_TS11_WIFI,
-    DEVICE_TYPE_U2,
-]
 
 
 async def async_setup_entry(
@@ -29,11 +24,10 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        dtype = device.get("deviceType")
-        if dtype in THERMOSTAT_TYPES:
+        if is_temp_regulation(device):
             entities.append(EOBActualTempSensor(coordinator, device))
             entities.append(EOBDesiredTempSensor(coordinator, device))
-            entities.append(EOBFirmwareSensor(coordinator, device))
+        entities.append(EOBFirmwareSensor(coordinator, device))
     if entities:
         async_add_entities(entities)
 
@@ -60,7 +54,9 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def _device(self) -> dict | None:
-        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        if not self.coordinator.data:
+            return None
+        devices = self.coordinator.data.get("devices", [])
         for d in devices:
             if d.get("deviceId") == self._device_id:
                 return d
@@ -97,7 +93,9 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def _device(self) -> dict | None:
-        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        if not self.coordinator.data:
+            return None
+        devices = self.coordinator.data.get("devices", [])
         for d in devices:
             if d.get("deviceId") == self._device_id:
                 return d
@@ -132,7 +130,9 @@ class EOBFirmwareSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def _device(self) -> dict | None:
-        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        if not self.coordinator.data:
+            return None
+        devices = self.coordinator.data.get("devices", [])
         for d in devices:
             if d.get("deviceId") == self._device_id:
                 return d
