@@ -67,7 +67,10 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
         d = self._device
         if not d:
             return None
-        therm = d.get("thermData") or d.get("thermSettings") or {}
+        val = d.get("thermData")
+        if val is not None:
+            return val.get("actualTemp")
+        therm = d.get("thermSettings") or {}
         return therm.get("actualTemp")
 
 
@@ -106,7 +109,10 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
         d = self._device
         if not d:
             return None
-        therm = d.get("thermData") or d.get("thermSettings") or {}
+        val = d.get("thermData")
+        if val is not None:
+            return val.get("desiredTemp")
+        therm = d.get("thermSettings") or {}
         return therm.get("desiredTemp")
 
 

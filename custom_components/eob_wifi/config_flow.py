@@ -31,6 +31,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         errors = {}
         if user_input is not None:
+            await self.async_set_unique_id(user_input[CONF_USERNAME].lower())
+            self._abort_if_unique_id_configured()
+
             try:
                 session = async_get_clientsession(self.hass)
                 url = f"{BASE_SERVER_URL}{API_LOGIN}"
@@ -44,10 +47,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     if resp.status != 200:
                         errors["base"] = "invalid_auth"
                     else:
-                        return self.async_create_entry(
-                            title=f"EOB WiFi ({user_input[CONF_USERNAME]})",
-                            data=user_input,
-                        )
+                        data = await resp.json()
+                        if not data.get("authToken") or not data.get("id"):
+                            errors["base"] = "cannot_connect"
+                        else:
+                            return self.async_create_entry(
+                                title=f"EOB WiFi ({user_input[CONF_USERNAME]})",
+                                data=user_input,
+                            )
             except aiohttp.ClientError:
                 errors["base"] = "cannot_connect"
 

@@ -93,7 +93,10 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         d = self._device
         if not d:
             return {}
-        return d.get("thermData") or d.get("thermSettings") or {}
+        val = d.get("thermData")
+        if val is not None:
+            return val
+        return d.get("thermSettings") or {}
 
     def _get_therm_settings(self) -> dict:
         d = self._device

@@ -11,7 +11,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    API_DEVICE,
     API_DEVICES_WITH_FCM,
     API_LOGIN,
     BASE_SERVER_URL,
@@ -119,15 +118,4 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
                     await self.mqtt_manager.add_device(device)
         return {"devices": self.devices}
 
-    async def send_command(self, device_data: dict) -> bool:
-        if not self.auth_token:
-            await self._login()
-        url = f"{BASE_SERVER_URL}{API_DEVICE}"
-        headers = {"Authorization": f"Bearer {self.auth_token}"}
-        async with self.session.post(url, json=device_data, headers=headers) as resp:
-            if resp.status == 401:
-                await self._login()
-                headers = {"Authorization": f"Bearer {self.auth_token}"}
-                async with self.session.post(url, json=device_data, headers=headers) as r:
-                    return r.status == 200
-            return resp.status == 200
+
