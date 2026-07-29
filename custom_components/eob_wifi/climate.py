@@ -79,7 +79,6 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         self, coordinator: EOBWifiCoordinator, device: dict
     ) -> None:
         super().__init__(coordinator)
-        self._device = device
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_{self._device_id}"
         self._attr_name = device.get("name", f"EOB Thermostat {self._device_id}")
@@ -92,14 +91,31 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             sw_version=device.get("firmwareVersionStringFromDevice"),
         )
 
+    @property
+    def _device(self) -> dict | None:
+        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        for d in devices:
+            if d.get("deviceId") == self._device_id:
+                return d
+        return None
+
     def _get_therm_data(self) -> dict:
-        return self._device.get("thermData") or {}
+        d = self._device
+        if not d:
+            return {}
+        return d.get("thermData") or d.get("thermSettings") or {}
 
     def _get_therm_settings(self) -> dict:
-        return self._device.get("thermSettings") or {}
+        d = self._device
+        if not d:
+            return {}
+        return d.get("thermSettings") or {}
 
     def _get_device_data(self) -> dict:
-        return self._device.get("deviceData") or {}
+        d = self._device
+        if not d:
+            return {}
+        return d.get("deviceData") or {}
 
     @property
     def current_temperature(self) -> float | None:
@@ -163,7 +179,6 @@ class EOBSwitch(CoordinatorEntity, ClimateEntity):
         self, coordinator: EOBWifiCoordinator, device: dict
     ) -> None:
         super().__init__(coordinator)
-        self._device = device
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_switch_{self._device_id}"
         self._attr_name = device.get("name", f"EOB Switch {self._device_id}")
@@ -176,8 +191,19 @@ class EOBSwitch(CoordinatorEntity, ClimateEntity):
             sw_version=device.get("firmwareVersionStringFromDevice"),
         )
 
+    @property
+    def _device(self) -> dict | None:
+        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        for d in devices:
+            if d.get("deviceId") == self._device_id:
+                return d
+        return None
+
     def _get_device_data(self) -> dict:
-        return self._device.get("deviceData") or {}
+        d = self._device
+        if not d:
+            return {}
+        return d.get("deviceData") or {}
 
     @property
     def hvac_mode(self) -> HVACMode | None:

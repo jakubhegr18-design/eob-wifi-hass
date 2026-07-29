@@ -46,7 +46,6 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
         self, coordinator: EOBWifiCoordinator, device: dict
     ) -> None:
         super().__init__(coordinator)
-        self._device = device
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_actual_temp_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Temperature"
@@ -60,8 +59,19 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
         )
 
     @property
+    def _device(self) -> dict | None:
+        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        for d in devices:
+            if d.get("deviceId") == self._device_id:
+                return d
+        return None
+
+    @property
     def native_value(self) -> float | None:
-        therm = self._device.get("thermData") or {}
+        d = self._device
+        if not d:
+            return None
+        therm = d.get("thermData") or d.get("thermSettings") or {}
         return therm.get("actualTemp")
 
 
@@ -73,7 +83,6 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
         self, coordinator: EOBWifiCoordinator, device: dict
     ) -> None:
         super().__init__(coordinator)
-        self._device = device
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_desired_temp_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Target Temperature"
@@ -87,8 +96,19 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
         )
 
     @property
+    def _device(self) -> dict | None:
+        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        for d in devices:
+            if d.get("deviceId") == self._device_id:
+                return d
+        return None
+
+    @property
     def native_value(self) -> float | None:
-        therm = self._device.get("thermData") or {}
+        d = self._device
+        if not d:
+            return None
+        therm = d.get("thermData") or d.get("thermSettings") or {}
         return therm.get("desiredTemp")
 
 
@@ -98,7 +118,6 @@ class EOBFirmwareSensor(CoordinatorEntity, SensorEntity):
         self, coordinator: EOBWifiCoordinator, device: dict
     ) -> None:
         super().__init__(coordinator)
-        self._device = device
         self._device_id = device.get("deviceId")
         self._attr_unique_id = f"eob_wifi_fw_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Firmware"
@@ -112,5 +131,16 @@ class EOBFirmwareSensor(CoordinatorEntity, SensorEntity):
         )
 
     @property
+    def _device(self) -> dict | None:
+        devices = self.coordinator.data.get("devices", []) if self.coordinator.data else []
+        for d in devices:
+            if d.get("deviceId") == self._device_id:
+                return d
+        return None
+
+    @property
     def native_value(self) -> str | None:
-        return self._device.get("firmwareVersionStringFromDevice")
+        d = self._device
+        if not d:
+            return None
+        return d.get("firmwareVersionStringFromDevice")
