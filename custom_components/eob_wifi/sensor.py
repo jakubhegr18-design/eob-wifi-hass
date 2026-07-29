@@ -76,7 +76,6 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
 
 
 class EOBFirmwareSensor(CoordinatorEntity, SensorEntity):
-    _attr_device_class = SensorDeviceClass.FIRMWARE
 
     def __init__(
         self, coordinator: EOBWifiCoordinator, device: dict
