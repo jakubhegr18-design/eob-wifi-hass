@@ -62,16 +62,26 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
                 return d
         return None
 
+    @staticmethod
+    def _to_float(val) -> float | None:
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
+
     @property
-    def native_value(self) -> float | None:
+    def _therm_data(self) -> dict:
         d = self._device
         if not d:
-            return None
+            return {}
         val = d.get("thermData")
-        if val is not None:
-            return val.get("actualTemp")
-        therm = d.get("thermSettings") or {}
-        return therm.get("actualTemp")
+        return val if isinstance(val, dict) else {}
+
+    @property
+    def native_value(self) -> float | None:
+        return self._to_float(self._therm_data.get("actualTemp"))
 
 
 class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
@@ -104,16 +114,26 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
                 return d
         return None
 
+    @staticmethod
+    def _to_float(val) -> float | None:
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
+
     @property
-    def native_value(self) -> float | None:
+    def _therm_data(self) -> dict:
         d = self._device
         if not d:
-            return None
+            return {}
         val = d.get("thermData")
-        if val is not None:
-            return val.get("desiredTemp")
-        therm = d.get("thermSettings") or {}
-        return therm.get("desiredTemp")
+        return val if isinstance(val, dict) else {}
+
+    @property
+    def native_value(self) -> float | None:
+        return self._to_float(self._therm_data.get("desiredTemp"))
 
 
 class EOBFirmwareSensor(CoordinatorEntity, SensorEntity):

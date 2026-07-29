@@ -105,11 +105,16 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
             therm_settings = device.get("thermSettings") or {}
             device_data = device.get("deviceData") or {}
             LOGGER.debug(
-                "device %s: type=%s variant=%s isAnalogMode=%s isAuto=%s isSwitchedOn=%s",
+                "device %s: type=%s variant=%s isAnalogMode=%s isAuto=%s isSwitchedOn=%s "
+                "actualTemp=%s desiredTemp=%s thermData=%s thermSettings=%s",
                 device.get("name"), dtype, variant,
                 therm_data.get("isAnalogMode"),
                 therm_settings.get("isAuto"),
                 device_data.get("isSwitchedOn"),
+                therm_data.get("actualTemp"),
+                therm_data.get("desiredTemp"),
+                dict(therm_data),
+                dict(therm_settings),
             )
             if self.mqtt_manager.get_client(device_id) is None:
                 unique_id = device.get("uniqueIdentifier")

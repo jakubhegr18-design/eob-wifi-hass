@@ -94,7 +94,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         if not d:
             return {}
         val = d.get("thermData")
-        if val is not None:
+        if isinstance(val, dict):
             return val
         return d.get("thermSettings") or {}
 
@@ -102,27 +102,39 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         d = self._device
         if not d:
             return {}
-        return d.get("thermSettings") or {}
+        val = d.get("thermSettings")
+        return val if isinstance(val, dict) else {}
 
     def _get_is_analog_mode(self) -> bool:
         d = self._device
         if not d:
             return False
-        return bool((d.get("thermData") or {}).get(ATTR_IS_ANALOG_MODE))
+        therm = d.get("thermData")
+        return bool(therm.get(ATTR_IS_ANALOG_MODE)) if isinstance(therm, dict) else False
 
     def _get_device_data(self) -> dict:
         d = self._device
         if not d:
             return {}
-        return d.get("deviceData") or {}
+        val = d.get("deviceData")
+        return val if isinstance(val, dict) else {}
+
+    @staticmethod
+    def _to_float(val) -> float | None:
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
 
     @property
     def current_temperature(self) -> float | None:
-        return self._get_therm_data().get("actualTemp")
+        return self._to_float(self._get_therm_data().get("actualTemp"))
 
     @property
     def target_temperature(self) -> float | None:
-        return self._get_therm_data().get("desiredTemp")
+        return self._to_float(self._get_therm_data().get("desiredTemp"))
 
     @property
     def hvac_mode(self) -> HVACMode | None:
