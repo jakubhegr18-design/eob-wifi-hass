@@ -1,5 +1,11 @@
 # EOB WiFi
 
+[![GitHub Release](https://img.shields.io/github/v/release/jakubhegr18-design/eob-wifi-hass?style=for-the-badge)](https://github.com/jakubhegr18-design/eob-wifi-hass/releases)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/jakubhegr18-design/eob-wifi-hass)
+[![GitHub](https://img.shields.io/github/license/jakubhegr18-design/eob-wifi-hass?style=for-the-badge)](LICENSE)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jakubhegr18-design&repository=eob-wifi-hass&category=Integration)
+
 Home Assistant custom integration for controlling **Elektrobock EOB WiFi** devices (thermostats, relays, sensors).
 
 ## Features
@@ -18,10 +24,14 @@ Home Assistant custom integration for controlling **Elektrobock EOB WiFi** devic
 
 ### HACS (recommended)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jakubhegr18-design&repository=eob-wifi-hass&category=Integration)
+
+Click the badge above, or manually:
+
 1. Open HACS in Home Assistant
-2. Go to "Integrations" → "Custom repositories"
-3. Add this repository URL as an Integration repository
-4. Click "Download" on the EOB WiFi integration
+2. Go to **Integrations → Custom repositories**
+3. Add `https://github.com/jakubhegr18-design/eob-wifi-hass` as category **Integration**
+4. Click **Download** on the EOB WiFi integration
 5. Restart Home Assistant
 
 ### Manual
