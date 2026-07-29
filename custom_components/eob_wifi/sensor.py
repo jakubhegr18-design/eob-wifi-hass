@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
-from .const import DEVICE_TYPE_NAMES, DOMAIN, MANUFACTURER, is_temp_regulation
+from .const import DEVICE_TYPE_NAMES, DOMAIN, MANUFACTURER, _is_analog_mode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        if is_temp_regulation(device):
+        if _is_analog_mode(device):
             entities.append(EOBActualTempSensor(coordinator, device))
             entities.append(EOBDesiredTempSensor(coordinator, device))
         entities.append(EOBFirmwareSensor(coordinator, device))

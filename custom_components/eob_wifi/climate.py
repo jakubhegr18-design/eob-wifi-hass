@@ -17,13 +17,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
 from .const import (
+    ATTR_IS_ANALOG_MODE,
     DEVICE_TYPE_NAMES,
     DOMAIN,
     MANUFACTURER,
     MODE_AUTO,
     MODE_MANU,
     MODE_OFF,
-    is_temp_regulation,
+    _is_analog_mode,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,10 +46,13 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        if is_temp_regulation(device):
+        if _is_analog_mode(device):
             entities.append(EOBThermostat(coordinator, device))
     if entities:
         async_add_entities(entities)
+    # If user toggles "Temperature / time control" (thermData.isAnalogMode) in the
+    # app at runtime, HA cannot change the entity domain (climate vs switch) live.
+    # A config entry reload (or HA restart) is required to pick up the new type.
 
 
 class EOBThermostat(CoordinatorEntity, ClimateEntity):
@@ -97,6 +101,12 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             return {}
         return d.get("thermSettings") or {}
 
+    def _get_is_analog_mode(self) -> bool:
+        d = self._device
+        if not d:
+            return False
+        return bool((d.get("thermData") or {}).get(ATTR_IS_ANALOG_MODE))
+
     def _get_device_data(self) -> dict:
         d = self._device
         if not d:
@@ -127,7 +137,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             return
 
         mqtt = self.coordinator.mqtt_manager
-        ok = await mqtt.set_thermostat_temp(self._device_id, temp)
+        ok = await mqtt.set_thermostat_temp(self._device_id, temp, self._get_is_analog_mode())
         if ok:
             therm = self._get_therm_data()
             therm["desiredTemp"] = temp
@@ -143,7 +153,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             ok = await mqtt.set_device_mode(self._device_id, MODE_OFF)
         else:
             desired = self._get_therm_data().get("desiredTemp", 21)
-            ok = await mqtt.set_thermostat_temp(self._device_id, desired)
+            ok = await mqtt.set_thermostat_temp(self._device_id, desired, self._get_is_analog_mode())
 
         if ok:
             device_data = self._get_device_data()

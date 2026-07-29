@@ -14,7 +14,7 @@ from .const import (
     DEVICE_TYPE_NAMES,
     DOMAIN,
     MANUFACTURER,
-    is_temp_regulation,
+    _is_analog_mode,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        if not is_temp_regulation(device):
+        if not _is_analog_mode(device):
             entities.append(EOBSwitch(coordinator, device))
     if entities:
         async_add_entities(entities)

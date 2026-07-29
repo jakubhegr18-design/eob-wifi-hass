@@ -253,11 +253,11 @@ class MqttManager:
         for device_id in list(self._clients):
             await self.remove_device(device_id)
 
-    async def set_thermostat_temp(self, device_id: int, temperature: float) -> bool:
+    async def set_thermostat_temp(self, device_id: int, temperature: float, is_analog_mode: bool = False) -> bool:
         client = self.get_client(device_id)
         if client is None:
             return False
-        payload = _build_therm_data_payload(temperature)
+        payload = _build_therm_data_payload(temperature, is_analog_mode)
         client.publish_fire_and_forget(0x10, 0x0B, payload)
         return True
 
