@@ -101,6 +101,9 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
             device_id = device.get("deviceId")
             dtype = device.get("deviceType")
             variant = device.get("deviceVariant")
+
+            self._merge_mqtt_state(device)
+
             therm_data = device.get("thermData") or {}
             therm_settings = device.get("thermSettings") or {}
             device_data = device.get("deviceData") or {}
@@ -118,19 +121,41 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
                 dict(therm_data) if isinstance(therm_data, dict) else therm_data,
                 dict(therm_settings) if isinstance(therm_settings, dict) else therm_settings,
             )
-            mqtt_state = self.mqtt_manager.get_state(device_id)
-            if mqtt_state:
-                device["mqttState"] = {
-                    f"0x{k:04X}": v.hex() for k, v in mqtt_state.items()
-                }
-                LOGGER.debug(
-                    "MQTT state for device %s: %s", device.get("name"), device["mqttState"]
-                )
             if self.mqtt_manager.get_client(device_id) is None:
                 unique_id = device.get("uniqueIdentifier")
                 mqtt_pass = device.get("mqttPass")
                 if unique_id and mqtt_pass:
                     await self.mqtt_manager.add_device(device)
         return {"devices": self.devices}
+
+    def _merge_mqtt_state(self, device: dict) -> None:
+        """Merge MQTT push state into device dict when REST API returns no data."""
+        device_id = device.get("deviceId")
+        mqtt_state = self.mqtt_manager.get_state(device_id)
+        if not mqtt_state:
+            return
+
+        device.setdefault("mqttState", {})
+        for k, v in mqtt_state.items():
+            device["mqttState"][f"0x{k:04X}"] = v.hex()
+
+        LOGGER.debug("MQTT state for device %s: %s", device.get("name"), device["mqttState"])
+
+        key_0b = (0x30 << 8) | 0x0B
+        payload = mqtt_state.get(key_0b)
+        if payload and len(payload) >= 2:
+            actual_raw = payload[0]
+            desired_raw = payload[1]
+            device.setdefault("thermData", {})
+            device["thermData"]["actualTemp"] = actual_raw / 2.0
+            device["thermData"]["desiredTemp"] = desired_raw / 2.0
+            LOGGER.debug(
+                "MQTT→thermData for %s: actualTemp=%.1f (0x%02X) desiredTemp=%.1f (0x%02X) "
+                "raw=%s — PLEASE VERIFY field mapping against app!",
+                device.get("name"),
+                device["thermData"]["actualTemp"], actual_raw,
+                device["thermData"]["desiredTemp"], desired_raw,
+                payload.hex()
+            )
 
 
