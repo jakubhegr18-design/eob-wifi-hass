@@ -15,6 +15,7 @@ from .const import (
     DEVICE_TYPE_THERMOSTATS,
     DOMAIN,
     MANUFACTURER,
+    _is_analog_mode,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ async def async_setup_entry(
     entities = []
     for device in coordinator.devices:
         dtype = device.get("deviceType")
-        if dtype not in DEVICE_TYPE_THERMOSTATS:
+        if dtype not in DEVICE_TYPE_THERMOSTATS and not _is_analog_mode(device):
             entities.append(EOBSwitch(coordinator, device))
     if entities:
         async_add_entities(entities)
@@ -77,8 +78,9 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
         mqtt = self.coordinator.mqtt_manager
         ok = await mqtt.set_relay_state(self._device_id, True)
         if ok:
-            device_data = self._get_device_data()
-            device_data["isSwitchedOn"] = True
+            d = self._device
+            if d is not None:
+                d.setdefault("deviceData", {})["isSwitchedOn"] = True
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
 
@@ -86,7 +88,8 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
         mqtt = self.coordinator.mqtt_manager
         ok = await mqtt.set_relay_state(self._device_id, False)
         if ok:
-            device_data = self._get_device_data()
-            device_data["isSwitchedOn"] = False
+            d = self._device
+            if d is not None:
+                d.setdefault("deviceData", {})["isSwitchedOn"] = False
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()

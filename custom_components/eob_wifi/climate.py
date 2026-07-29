@@ -156,8 +156,9 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         mqtt = self.coordinator.mqtt_manager
         ok = await mqtt.set_thermostat_temp(self._device_id, temp, self._get_is_analog_mode())
         if ok:
-            therm = self._get_therm_data()
-            therm["desiredTemp"] = temp
+            d = self._device
+            if d is not None:
+                d.setdefault("thermData", {})["desiredTemp"] = temp
             self.async_write_ha_state()
             await self._refresh()
 
@@ -174,12 +175,10 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             ok = await mqtt.set_thermostat_temp(self._device_id, desired, self._get_is_analog_mode())
 
         if ok:
-            device_data = self._get_device_data()
-            if mode == MODE_OFF:
-                device_data["isSwitchedOn"] = False
-            else:
-                device_data["isSwitchedOn"] = True
-            settings = self._get_therm_settings()
-            settings["isAuto"] = mode == MODE_AUTO
+            d = self._device
+            if d is not None:
+                dd = d.setdefault("deviceData", {})
+                dd["isSwitchedOn"] = mode != MODE_OFF
+                d.setdefault("thermSettings", {})["isAuto"] = mode == MODE_AUTO
             self.async_write_ha_state()
             await self._refresh()

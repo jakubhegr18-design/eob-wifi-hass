@@ -112,6 +112,7 @@ class DeviceMqttClient:
         self._pub_topic = _make_pub_topic(self._device_type, self._unique_id)
 
         self._client = mqtt.Client(
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
             client_id=_generate_client_id(),
             transport="websockets",
         )
