@@ -12,9 +12,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import EOBWifiCoordinator
 from .const import (
     DEVICE_TYPE_NAMES,
+    DEVICE_TYPE_THERMOSTATS,
     DOMAIN,
     MANUFACTURER,
-    _is_analog_mode,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,7 +28,8 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        if not _is_analog_mode(device):
+        dtype = device.get("deviceType")
+        if dtype not in DEVICE_TYPE_THERMOSTATS:
             entities.append(EOBSwitch(coordinator, device))
     if entities:
         async_add_entities(entities)

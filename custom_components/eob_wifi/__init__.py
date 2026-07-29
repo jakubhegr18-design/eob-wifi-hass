@@ -104,17 +104,19 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
             therm_data = device.get("thermData") or {}
             therm_settings = device.get("thermSettings") or {}
             device_data = device.get("deviceData") or {}
+            temp = therm_data if isinstance(therm_data, dict) and therm_data else therm_settings
             LOGGER.debug(
                 "device %s: type=%s variant=%s isAnalogMode=%s isAuto=%s isSwitchedOn=%s "
-                "actualTemp=%s desiredTemp=%s thermData=%s thermSettings=%s",
+                "actualTemp=%s desiredTemp=%s tempSource=%s thermData=%s thermSettings=%s",
                 device.get("name"), dtype, variant,
-                therm_data.get("isAnalogMode"),
-                therm_settings.get("isAuto"),
-                device_data.get("isSwitchedOn"),
-                therm_data.get("actualTemp"),
-                therm_data.get("desiredTemp"),
-                dict(therm_data),
-                dict(therm_settings),
+                therm_data.get("isAnalogMode") if isinstance(therm_data, dict) else None,
+                therm_settings.get("isAuto") if isinstance(therm_settings, dict) else None,
+                device_data.get("isSwitchedOn") if isinstance(device_data, dict) else None,
+                temp.get("actualTemp"),
+                temp.get("desiredTemp"),
+                "thermData" if isinstance(therm_data, dict) and therm_data else "thermSettings",
+                dict(therm_data) if isinstance(therm_data, dict) else therm_data,
+                dict(therm_settings) if isinstance(therm_settings, dict) else therm_settings,
             )
             if self.mqtt_manager.get_client(device_id) is None:
                 unique_id = device.get("uniqueIdentifier")

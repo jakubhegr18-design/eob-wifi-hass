@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
-from .const import DEVICE_TYPE_NAMES, DOMAIN, MANUFACTURER, _is_analog_mode
+from .const import DEVICE_TYPE_NAMES, DEVICE_TYPE_THERMOSTATS, DOMAIN, MANUFACTURER, _is_analog_mode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +24,8 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        if _is_analog_mode(device):
+        dtype = device.get("deviceType")
+        if dtype in DEVICE_TYPE_THERMOSTATS or _is_analog_mode(device):
             entities.append(EOBActualTempSensor(coordinator, device))
             entities.append(EOBDesiredTempSensor(coordinator, device))
         entities.append(EOBFirmwareSensor(coordinator, device))
@@ -77,7 +78,9 @@ class EOBActualTempSensor(CoordinatorEntity, SensorEntity):
         if not d:
             return {}
         val = d.get("thermData")
-        return val if isinstance(val, dict) else {}
+        if isinstance(val, dict) and val:
+            return val
+        return d.get("thermSettings") or {}
 
     @property
     def native_value(self) -> float | None:
@@ -129,7 +132,9 @@ class EOBDesiredTempSensor(CoordinatorEntity, SensorEntity):
         if not d:
             return {}
         val = d.get("thermData")
-        return val if isinstance(val, dict) else {}
+        if isinstance(val, dict) and val:
+            return val
+        return d.get("thermSettings") or {}
 
     @property
     def native_value(self) -> float | None:

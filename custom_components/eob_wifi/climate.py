@@ -19,6 +19,7 @@ from . import EOBWifiCoordinator
 from .const import (
     ATTR_IS_ANALOG_MODE,
     DEVICE_TYPE_NAMES,
+    DEVICE_TYPE_THERMOSTATS,
     DOMAIN,
     MANUFACTURER,
     MODE_AUTO,
@@ -46,13 +47,11 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        if _is_analog_mode(device):
+        dtype = device.get("deviceType")
+        if dtype in DEVICE_TYPE_THERMOSTATS or _is_analog_mode(device):
             entities.append(EOBThermostat(coordinator, device))
     if entities:
         async_add_entities(entities)
-    # If user toggles "Temperature / time control" (thermData.isAnalogMode) in the
-    # app at runtime, HA cannot change the entity domain (climate vs switch) live.
-    # A config entry reload (or HA restart) is required to pick up the new type.
 
 
 class EOBThermostat(CoordinatorEntity, ClimateEntity):
@@ -94,7 +93,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         if not d:
             return {}
         val = d.get("thermData")
-        if isinstance(val, dict):
+        if isinstance(val, dict) and val:
             return val
         return d.get("thermSettings") or {}
 
