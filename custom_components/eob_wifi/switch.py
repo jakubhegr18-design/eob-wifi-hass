@@ -80,6 +80,7 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
             device_data = self._get_device_data()
             device_data["isSwitchedOn"] = True
             self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         mqtt = self.coordinator.mqtt_manager
@@ -88,3 +89,4 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
             device_data = self._get_device_data()
             device_data["isSwitchedOn"] = False
             self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()

@@ -4,7 +4,6 @@ import asyncio
 import logging
 import random
 import string
-import threading
 from typing import Any, Callable
 
 import paho.mqtt.client as mqtt
@@ -122,7 +121,7 @@ class DeviceMqttClient:
         self._client.on_message = self._on_message
         self._client.on_disconnect = self._on_disconnect
 
-        self._connected = threading.Event()
+        self._connected = asyncio.Event()
         self._response_futures: dict[int, asyncio.Future] = {}
         self._msg_id_counter = random.randint(0, 32000)
         self._raw_message_callback: Callable[[bytes], None] | None = None
@@ -142,7 +141,7 @@ class DeviceMqttClient:
     def _on_connect(self, client, userdata, flags, rc) -> None:
         if rc == 0:
             client.subscribe(self._sub_topic)
-            self._connected.set()
+            self.hass.loop.call_soon_threadsafe(self._connected.set)
             LOGGER.info(
                 "MQTT connected for device %s (topic: %s)",
                 self._device_id, self._sub_topic
@@ -154,7 +153,7 @@ class DeviceMqttClient:
             )
 
     def _on_disconnect(self, client, userdata, rc) -> None:
-        self._connected.clear()
+        self.hass.loop.call_soon_threadsafe(self._connected.clear)
         LOGGER.debug("MQTT disconnected for device %s", self._device_id)
 
     def _on_message(self, client, userdata, msg) -> None:
@@ -170,11 +169,14 @@ class DeviceMqttClient:
         if len(data) < 6:
             return
         msg_id = (data[2] << 8) | data[3]
+        self.hass.loop.call_soon_threadsafe(self._process_response, msg_id, data)
+
+    def _process_response(self, msg_id: int, data: bytes) -> None:
         future = self._response_futures.pop(msg_id, None)
         if future is not None and not future.done():
-            self.hass.loop.call_soon_threadsafe(future.set_result, data)
+            future.set_result(data)
         if self._raw_message_callback is not None:
-            self.hass.loop.call_soon_threadsafe(self._raw_message_callback, data)
+            self._raw_message_callback(data)
 
     async def connect(self) -> None:
         await self.hass.async_add_executor_job(
@@ -182,12 +184,12 @@ class DeviceMqttClient:
         )
         self._client.connect_async(MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_KEEPALIVE)
         self._client.loop_start()
-        for attempt in range(30):
-            if self._connected.is_set():
-                LOGGER.info("MQTT connected for device %s", self._device_id)
-                return
-            await asyncio.sleep(0.1)
-        LOGGER.warning("MQTT connection timeout for device %s", self._device_id)
+        self._connected.clear()
+        try:
+            await asyncio.wait_for(self._connected.wait(), timeout=3.0)
+            LOGGER.info("MQTT connected for device %s", self._device_id)
+        except asyncio.TimeoutError:
+            LOGGER.warning("MQTT connection timeout for device %s", self._device_id)
 
     async def disconnect(self) -> None:
         self._client.loop_stop()

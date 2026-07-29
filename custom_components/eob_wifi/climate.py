@@ -145,6 +145,9 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             return HVACMode.AUTO
         return HVACMode.HEAT
 
+    async def _refresh(self) -> None:
+        await self.coordinator.async_request_refresh()
+
     async def async_set_temperature(self, **kwargs: Any) -> None:
         temp = kwargs.get(ATTR_TEMPERATURE)
         if temp is None:
@@ -156,6 +159,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             therm = self._get_therm_data()
             therm["desiredTemp"] = temp
             self.async_write_ha_state()
+            await self._refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         mode = HVAC_MAP_REVERSE.get(hvac_mode, MODE_AUTO)
@@ -178,3 +182,4 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             settings = self._get_therm_settings()
             settings["isAuto"] = mode == MODE_AUTO
             self.async_write_ha_state()
+            await self._refresh()
