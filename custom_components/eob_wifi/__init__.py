@@ -72,7 +72,7 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
             if resp.status != 200:
                 raise UpdateFailed("Login failed, check credentials")
             data = await resp.json()
-            self.auth_token = data.get("token") or data.get("access_token")
+            self.auth_token = data.get("authToken")
             self.user_id = data.get("id")
 
     async def _fetch_devices(self) -> list[dict]:
