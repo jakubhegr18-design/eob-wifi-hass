@@ -118,6 +118,14 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
                 dict(therm_data) if isinstance(therm_data, dict) else therm_data,
                 dict(therm_settings) if isinstance(therm_settings, dict) else therm_settings,
             )
+            mqtt_state = self.mqtt_manager.get_state(device_id)
+            if mqtt_state:
+                device["mqttState"] = {
+                    f"0x{k:04X}": v.hex() for k, v in mqtt_state.items()
+                }
+                LOGGER.debug(
+                    "MQTT state for device %s: %s", device.get("name"), device["mqttState"]
+                )
             if self.mqtt_manager.get_client(device_id) is None:
                 unique_id = device.get("uniqueIdentifier")
                 mqtt_pass = device.get("mqttPass")

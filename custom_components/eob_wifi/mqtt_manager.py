@@ -126,6 +126,7 @@ class DeviceMqttClient:
         self._response_futures: dict[int, asyncio.Future] = {}
         self._msg_id_counter = random.randint(0, 32000)
         self._raw_message_callback: Callable[[bytes], None] | None = None
+        self._state: dict[int, bytes] = {}
 
     @property
     def is_connected(self) -> bool:
@@ -176,8 +177,32 @@ class DeviceMqttClient:
         future = self._response_futures.pop(msg_id, None)
         if future is not None and not future.done():
             future.set_result(data)
+        if len(data) >= 6 and data[0] == 0x30 and data[1] == 0x0A:
+            self._parse_multi_response(data[6:])
         if self._raw_message_callback is not None:
             self._raw_message_callback(data)
+
+    def _parse_multi_response(self, payload: bytes) -> None:
+        offset = 0
+        while offset + 4 <= len(payload):
+            inner_type1 = payload[offset]
+            inner_type2 = payload[offset + 1]
+            inner_len = (payload[offset + 2] << 8) | payload[offset + 3]
+            offset += 4
+            if offset + inner_len > len(payload):
+                break
+            inner_payload = payload[offset:offset + inner_len]
+            offset += inner_len
+            inner_key = (inner_type1 << 8) | inner_type2
+            self._state[inner_key] = inner_payload
+            LOGGER.debug(
+                "MQTT state[0x%02X%02X] for device %s: %s",
+                inner_type1, inner_type2, self._device_id,
+                inner_payload.hex()
+            )
+
+    def get_state(self) -> dict[int, bytes]:
+        return dict(self._state)
 
     async def connect(self) -> None:
         await self.hass.async_add_executor_job(
@@ -265,6 +290,10 @@ class MqttManager:
 
     def get_client(self, device_id: int) -> DeviceMqttClient | None:
         return self._clients.get(device_id)
+
+    def get_state(self, device_id: int) -> dict[int, bytes] | None:
+        client = self._clients.get(device_id)
+        return client.get_state() if client else None
 
     async def remove_device(self, device_id: int) -> None:
         client = self._clients.pop(device_id, None)
