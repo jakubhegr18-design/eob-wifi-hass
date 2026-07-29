@@ -41,6 +41,8 @@ Click the badge above, or manually:
 
 ## Configuration
 
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=eob_wifi)
+
 1. Go to Settings → Devices & Services → Add Integration
 2. Search for "EOB WiFi"
 3. Enter your **username/email** and **password** (same as in the EOB WiFi mobile app)
