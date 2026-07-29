@@ -1,5 +1,7 @@
 # EOB WiFi
 
+> ⚠️ **BETA** — This integration is under active development. Some features may be buggy or incomplete. Use at your own risk.
+
 [![GitHub Release](https://img.shields.io/github/v/release/jakubhegr18-design/eob-wifi-hass?style=for-the-badge)](https://github.com/jakubhegr18-design/eob-wifi-hass/releases)
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/jakubhegr18-design/eob-wifi-hass)
 [![GitHub](https://img.shields.io/github/license/jakubhegr18-design/eob-wifi-hass?style=for-the-badge)](LICENSE)
