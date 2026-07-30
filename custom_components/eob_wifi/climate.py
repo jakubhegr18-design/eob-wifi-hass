@@ -159,7 +159,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
             attrs["mqtt_raw_state"] = mqtt_state
         therm = self._get_therm_data()
         if isinstance(therm, dict):
-            for key in ("unknown_2", "unknown_3"):
+            for key in ("unknown_2", "unknown_3", "unknown_4"):
                 if key in therm:
                     attrs[key] = therm[key]
         return attrs

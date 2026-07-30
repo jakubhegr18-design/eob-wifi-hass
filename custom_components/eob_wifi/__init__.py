@@ -164,11 +164,12 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
             device.setdefault("thermData", {}).update(therm)
             LOGGER.debug(
                 "MQTT→thermData for %s: actualTemp=%.1f desiredTemp=%.1f "
-                "unknown_2=0x%02X unknown_3=0x%02X raw=%s",
+                "unknown_2=0x%02X unknown_3=0x%02X unknown_4=0x%02X raw=%s",
                 device.get("name"),
                 therm.get("actualTemp"), therm.get("desiredTemp"),
                 payload[2] if len(payload) > 2 else 0,
                 payload[3] if len(payload) > 3 else 0,
+                payload[4] if len(payload) > 4 else 0,
                 payload.hex()
             )
 

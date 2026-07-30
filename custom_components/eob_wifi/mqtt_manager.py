@@ -52,12 +52,15 @@ MULTI_READ_FIELDS = [0x01, 0x02, 0x03, 0x06, 0x07, 0x05, 0x09, 0x0B, 0x0C]
 def decode_therm_status(payload: bytes) -> dict:
     if len(payload) < 4:
         return {}
-    return {
+    result = {
         "desiredTemp": payload[0] / 2,
         "actualTemp": float(payload[1]),
         "unknown_2": payload[2],
         "unknown_3": payload[3],
     }
+    if len(payload) >= 5:
+        result["unknown_4"] = payload[4]
+    return result
 
 
 def _build_multi_read_payload() -> bytes:
