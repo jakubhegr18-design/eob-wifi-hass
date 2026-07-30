@@ -10,13 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
-from .const import (
-    DEVICE_TYPE_NAMES,
-    DEVICE_TYPE_THERMOSTATS,
-    DOMAIN,
-    MANUFACTURER,
-    _is_analog_mode,
-)
+from .const import DEVICE_TYPE_NAMES, DOMAIN, MANUFACTURER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,9 +23,7 @@ async def async_setup_entry(
     coordinator: EOBWifiCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for device in coordinator.devices:
-        dtype = device.get("deviceType")
-        if dtype not in DEVICE_TYPE_THERMOSTATS and not _is_analog_mode(device):
-            entities.append(EOBSwitch(coordinator, device))
+        entities.append(EOBSwitch(coordinator, device))
     if entities:
         async_add_entities(entities)
 
@@ -64,15 +56,15 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
                 return d
         return None
 
-    def _get_device_data(self) -> dict:
-        d = self._device
-        if not d:
-            return {}
-        return d.get("deviceData") or {}
-
     @property
     def is_on(self) -> bool | None:
-        return self._get_device_data().get("isSwitchedOn")
+        d = self._device
+        if not d:
+            return None
+        therm = d.get("thermData")
+        if not isinstance(therm, dict):
+            return None
+        return therm.get("isSwitchedOn")
 
     async def async_turn_on(self, **kwargs) -> None:
         mqtt = self.coordinator.mqtt_manager
@@ -80,7 +72,7 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
         if ok:
             d = self._device
             if d is not None:
-                d.setdefault("deviceData", {})["isSwitchedOn"] = True
+                d.setdefault("thermData", {})["isSwitchedOn"] = True
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
 
@@ -90,6 +82,6 @@ class EOBSwitch(CoordinatorEntity, SwitchEntity):
         if ok:
             d = self._device
             if d is not None:
-                d.setdefault("deviceData", {})["isSwitchedOn"] = False
+                d.setdefault("thermData", {})["isSwitchedOn"] = False
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
