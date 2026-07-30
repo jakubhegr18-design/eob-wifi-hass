@@ -111,12 +111,7 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
         therm = d.get("thermData")
         return bool(therm.get(ATTR_IS_ANALOG_MODE)) if isinstance(therm, dict) else False
 
-    def _get_device_data(self) -> dict:
-        d = self._device
-        if not d:
-            return {}
-        val = d.get("deviceData")
-        return val if isinstance(val, dict) else {}
+
 
     @staticmethod
     def _to_float(val) -> float | None:
@@ -137,11 +132,11 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_mode(self) -> HVACMode | None:
-        device_data = self._get_device_data()
-        if device_data.get("isSwitchedOn") is False:
+        therm = self._get_therm_data()
+        if therm.get("isSwitchedOn") is False:
             return HVACMode.OFF
-        therm = self._get_therm_settings()
-        if therm.get("isAuto") is True:
+        therm_settings = self._get_therm_settings()
+        if therm_settings.get("isAuto") is True:
             return HVACMode.AUTO
         return HVACMode.HEAT
 
@@ -181,20 +176,20 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         mode = HVAC_MAP_REVERSE.get(hvac_mode, MODE_AUTO)
         mqtt = self.coordinator.mqtt_manager
+        ok = False
 
-        if mode == MODE_AUTO:
-            ok = await mqtt.set_device_mode(self._device_id, MODE_AUTO)
-        elif mode == MODE_OFF:
-            ok = await mqtt.set_device_mode(self._device_id, MODE_OFF)
+        if mode == MODE_OFF:
+            ok = await mqtt.set_relay_state(self._device_id, False)
         else:
-            desired = self._get_therm_data().get("desiredTemp", 21)
-            ok = await mqtt.set_thermostat_temp(self._device_id, desired, self._get_is_analog_mode())
+            ok = await mqtt.set_relay_state(self._device_id, True)
+            if ok and mode == MODE_MANU:
+                desired = self._get_therm_data().get("desiredTemp", 21)
+                ok = await mqtt.set_thermostat_temp(self._device_id, desired, self._get_is_analog_mode())
 
         if ok:
             d = self._device
             if d is not None:
-                dd = d.setdefault("deviceData", {})
-                dd["isSwitchedOn"] = mode != MODE_OFF
+                d.setdefault("thermData", {})["isSwitchedOn"] = mode != MODE_OFF
                 d.setdefault("thermSettings", {})["isAuto"] = mode == MODE_AUTO
             self.async_write_ha_state()
             await self._refresh()

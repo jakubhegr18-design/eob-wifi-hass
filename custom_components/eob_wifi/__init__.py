@@ -154,7 +154,9 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
         key_02 = (0x30 << 8) | 0x02
         payload = mqtt_state.get(key_02)
         if payload and len(payload) >= 1:
-            device.setdefault("deviceData", {})["isSwitchedOn"] = bool(payload[0])
+            is_on = bool(payload[0])
+            device.setdefault("deviceData", {})["isSwitchedOn"] = is_on
+            device.setdefault("thermData", {})["isSwitchedOn"] = is_on
             device.setdefault("thermSettings", {})["isAuto"] = payload[0] == 1
 
         key_0b = (0x30 << 8) | 0x0B
