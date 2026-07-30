@@ -148,6 +148,22 @@ class EOBThermostat(CoordinatorEntity, ClimateEntity):
     async def _refresh(self) -> None:
         await self.coordinator.async_request_refresh()
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        d = self._device
+        if not d:
+            return {}
+        attrs = {}
+        mqtt_state = d.get("mqttState")
+        if mqtt_state:
+            attrs["mqtt_raw_state"] = mqtt_state
+        therm = self._get_therm_data()
+        if isinstance(therm, dict):
+            for key in ("unknown_2", "unknown_3"):
+                if key in therm:
+                    attrs[key] = therm[key]
+        return attrs
+
     async def async_set_temperature(self, **kwargs: Any) -> None:
         temp = kwargs.get(ATTR_TEMPERATURE)
         if temp is None:

@@ -18,7 +18,7 @@ from .const import (
     DEVICE_TYPES_USED_IN_APP,
     LOGGER,
 )
-from .mqtt_manager import MqttManager
+from .mqtt_manager import MqttManager, decode_therm_status
 
 PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
 
@@ -153,18 +153,16 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
 
         key_0b = (0x30 << 8) | 0x0B
         payload = mqtt_state.get(key_0b)
-        if payload and len(payload) >= 2:
-            actual_raw = payload[0]
-            desired_raw = payload[1]
-            device.setdefault("thermData", {})
-            device["thermData"]["actualTemp"] = actual_raw / 2.0
-            device["thermData"]["desiredTemp"] = desired_raw / 2.0
+        therm = decode_therm_status(payload) if payload else {}
+        if therm:
+            device.setdefault("thermData", {}).update(therm)
             LOGGER.debug(
-                "MQTT→thermData for %s: actualTemp=%.1f (0x%02X) desiredTemp=%.1f (0x%02X) "
-                "raw=%s — PLEASE VERIFY field mapping against app!",
+                "MQTT→thermData for %s: actualTemp=%.1f desiredTemp=%.1f "
+                "unknown_2=0x%02X unknown_3=0x%02X raw=%s",
                 device.get("name"),
-                device["thermData"]["actualTemp"], actual_raw,
-                device["thermData"]["desiredTemp"], desired_raw,
+                therm.get("actualTemp"), therm.get("desiredTemp"),
+                payload[2] if len(payload) > 2 else 0,
+                payload[3] if len(payload) > 3 else 0,
                 payload.hex()
             )
 

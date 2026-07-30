@@ -46,6 +46,17 @@ def _make_pub_topic(device_type: int, unique_id: int) -> str:
     return f"{base}/I/{str(unique_id).zfill(6)}"
 
 
+def decode_therm_status(payload: bytes) -> dict:
+    if len(payload) < 4:
+        return {}
+    return {
+        "desiredTemp": payload[0] / 2,
+        "actualTemp": float(payload[1]),
+        "unknown_2": payload[2],
+        "unknown_3": payload[3],
+    }
+
+
 def _build_binary_message(
     type_byte1: int, type_byte2: int, payload: bytes, msg_id: int | None = None
 ) -> bytes:
@@ -177,8 +188,12 @@ class DeviceMqttClient:
         future = self._response_futures.pop(msg_id, None)
         if future is not None and not future.done():
             future.set_result(data)
-        if len(data) >= 6 and data[0] == 0x30 and data[1] == 0x0A:
-            self._parse_multi_response(data[6:])
+        if len(data) >= 6:
+            msg_key = (data[0] << 8) | data[1]
+            if data[0] == 0x30 and data[1] == 0x0A:
+                self._parse_multi_response(data[6:])
+            else:
+                self._state[msg_key] = data[6:]
         if self._raw_message_callback is not None:
             self._raw_message_callback(data)
 
