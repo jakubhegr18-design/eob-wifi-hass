@@ -332,7 +332,7 @@ class MqttManager:
         if client is None:
             return False
         payload = _build_output_on_payload(turn_on)
-        client.publish_fire_and_forget(0x10, 0x01, payload)
+        client.publish_fire_and_forget(0x10, 0x02, payload)
         return True
 
     async def set_device_mode(
