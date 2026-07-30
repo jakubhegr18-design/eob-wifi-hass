@@ -46,6 +46,9 @@ def _make_pub_topic(device_type: int, unique_id: int) -> str:
     return f"{base}/I/{str(unique_id).zfill(6)}"
 
 
+MULTI_READ_FIELDS = [0x01, 0x02, 0x03, 0x06, 0x07, 0x05, 0x09, 0x0B, 0x0C]
+
+
 def decode_therm_status(payload: bytes) -> dict:
     if len(payload) < 4:
         return {}
@@ -55,6 +58,13 @@ def decode_therm_status(payload: bytes) -> dict:
         "unknown_2": payload[2],
         "unknown_3": payload[3],
     }
+
+
+def _build_multi_read_payload() -> bytes:
+    payload = bytearray()
+    for field_id in MULTI_READ_FIELDS:
+        payload += bytes([0x20, field_id, 0x00, 0x00])
+    return bytes(payload)
 
 
 def _build_binary_message(
@@ -281,6 +291,11 @@ class DeviceMqttClient:
         full_msg = _build_binary_message(type_byte1, type_byte2, payload, msg_id)
         self._client.publish(self._pub_topic, full_msg)
 
+    def send_multi_read(self) -> None:
+        payload = _build_multi_read_payload()
+        self.publish_fire_and_forget(0x10, 0x0A, payload)
+        LOGGER.debug("Multi-read sent for device %s", self._device_id)
+
     def set_raw_message_callback(self, callback: Callable[[bytes], None]) -> None:
         self._raw_message_callback = callback
 
@@ -318,6 +333,17 @@ class MqttManager:
     async def shutdown(self) -> None:
         for device_id in list(self._clients):
             await self.remove_device(device_id)
+
+    async def request_state(self, device_id: int) -> bool:
+        client = self.get_client(device_id)
+        if client is None:
+            return False
+        client.send_multi_read()
+        return True
+
+    async def request_all_states(self) -> None:
+        for device_id in self._clients:
+            self._clients[device_id].send_multi_read()
 
     async def set_thermostat_temp(self, device_id: int, temperature: float, is_analog_mode: bool = False) -> bool:
         client = self.get_client(device_id)

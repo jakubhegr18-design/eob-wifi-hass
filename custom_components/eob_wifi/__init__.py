@@ -99,6 +99,16 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
         ]
         for device in self.devices:
             device_id = device.get("deviceId")
+            if self.mqtt_manager.get_client(device_id) is None:
+                unique_id = device.get("uniqueIdentifier")
+                mqtt_pass = device.get("mqttPass")
+                if unique_id and mqtt_pass:
+                    await self.mqtt_manager.add_device(device)
+
+        await self.mqtt_manager.request_all_states()
+
+        for device in self.devices:
+            device_id = device.get("deviceId")
             dtype = device.get("deviceType")
             variant = device.get("deviceVariant")
 
@@ -121,11 +131,6 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
                 dict(therm_data) if isinstance(therm_data, dict) else therm_data,
                 dict(therm_settings) if isinstance(therm_settings, dict) else therm_settings,
             )
-            if self.mqtt_manager.get_client(device_id) is None:
-                unique_id = device.get("uniqueIdentifier")
-                mqtt_pass = device.get("mqttPass")
-                if unique_id and mqtt_pass:
-                    await self.mqtt_manager.add_device(device)
         return {"devices": self.devices}
 
     def _merge_mqtt_state(self, device: dict) -> None:
