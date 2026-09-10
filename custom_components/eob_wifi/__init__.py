@@ -25,7 +25,6 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.NUMBER,
-    Platform.SELECT,
 ]
 
 SCAN_INTERVAL = timedelta(seconds=60)
@@ -185,23 +184,6 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
                 therm_settings.get("comfortableTemperature", 0),
                 payload.hex()
             )
-
-        therm_settings = device.setdefault("thermSettings", {})
-
-        key_0f = (0x30 << 8) | 0x0F
-        payload = mqtt_state.get(key_0f)
-        if payload and len(payload) >= 1:
-            therm_settings["isAnalogMode"] = bool(payload[0])
-
-        key_10 = (0x30 << 8) | 0x10
-        payload = mqtt_state.get(key_10)
-        if payload and len(payload) >= 1:
-            therm_settings["autoSummerTimeChange"] = bool(payload[0])
-
-        key_11 = (0x30 << 8) | 0x11
-        payload = mqtt_state.get(key_11)
-        if payload and len(payload) >= 1:
-            therm_settings["timeZone"] = payload[0]
 
         key_20 = (0x20 << 8) | 0x03
         payload = mqtt_state.get(key_20)

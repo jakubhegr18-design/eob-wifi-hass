@@ -17,12 +17,6 @@ from .const import (
     MQTT_KEEPALIVE,
     MQTT_CLIENT_ID_PREFIX,
     TOPIC_BASE,
-    MSG_TYPE_THERM_ATTENUATION_TEMP,
-    MSG_TYPE_THERM_COMFORTABLE_TEMP,
-    MSG_TYPE_THERM_TEMP_TIME_CONTROL,
-    MSG_TYPE_THERM_AUTO_DST,
-    MSG_TYPE_THERM_TIMEZONE,
-    MSG_TYPE_THERM_WRITE_SETTINGS,
     MSG_TYPE_PROGRAM_READ,
     MSG_TYPE_PROGRAM_WRITE,
 )
@@ -54,7 +48,7 @@ def _make_pub_topic(device_type: int, unique_id: int) -> str:
     return f"{base}/I/{str(unique_id).zfill(6)}"
 
 
-MULTI_READ_FIELDS = [0x01, 0x02, 0x03, 0x06, 0x07, 0x05, 0x09, 0x0B, 0x0C, 0x0F, 0x10, 0x11]
+MULTI_READ_FIELDS = [0x01, 0x02, 0x03, 0x06, 0x07, 0x05, 0x09, 0x0B, 0x0C]
 
 
 def decode_therm_status(payload: bytes) -> dict:
@@ -104,18 +98,6 @@ def _build_output_on_payload(turn_on: bool) -> bytes:
 def _temp_to_bytes(temperature: float) -> bytes:
     temp_int = max(0, min(78, int(round(temperature * 2))))
     return bytes([temp_int])
-
-
-def _build_settings_payload(field_id: int, temperature: float) -> bytes:
-    return bytes([field_id]) + _temp_to_bytes(temperature)
-
-
-def _build_bool_payload(field_id: int, enabled: bool) -> bytes:
-    return bytes([field_id, 1 if enabled else 0])
-
-
-def _build_timezone_payload(timezone_index: int) -> bytes:
-    return bytes([0x11, max(0, min(24, timezone_index))])
 
 
 def _build_program_payload(program_data: bytes) -> bytes:
@@ -331,26 +313,6 @@ class DeviceMqttClient:
     def set_raw_message_callback(self, callback: Callable[[bytes], None]) -> None:
         self._raw_message_callback = callback
 
-    def publish_attenuation_temperature(self, temperature: float) -> None:
-        payload = bytes([0x0D]) + _temp_to_bytes(temperature)
-        self.publish_fire_and_forget(0x10, 0x0B, payload)
-
-    def publish_comfortable_temperature(self, temperature: float) -> None:
-        payload = bytes([0x0E]) + _temp_to_bytes(temperature)
-        self.publish_fire_and_forget(0x10, 0x0B, payload)
-
-    def publish_temp_time_control(self, enabled: bool) -> None:
-        payload = bytes([0x0F, 1 if enabled else 0])
-        self.publish_fire_and_forget(0x10, 0x0B, payload)
-
-    def publish_auto_dst(self, enabled: bool) -> None:
-        payload = bytes([0x10, 1 if enabled else 0])
-        self.publish_fire_and_forget(0x10, 0x0B, payload)
-
-    def publish_timezone(self, timezone_index: int) -> None:
-        payload = bytes([0x11, max(0, min(24, timezone_index))])
-        self.publish_fire_and_forget(0x10, 0x0B, payload)
-
     def publish_program_write(self, program_data: bytes) -> None:
         self.publish_fire_and_forget(
             MSG_TYPE_PROGRAM_WRITE[0], MSG_TYPE_PROGRAM_WRITE[1], program_data
@@ -437,41 +399,6 @@ class MqttManager:
             should_ignore_desired=should_ignore,
         )
         client.publish_fire_and_forget(0x00, 0x02, payload)
-        return True
-
-    async def set_attenuation_temperature(self, device_id: int, temperature: float) -> bool:
-        client = self.get_client(device_id)
-        if client is None:
-            return False
-        client.publish_attenuation_temperature(temperature)
-        return True
-
-    async def set_comfortable_temperature(self, device_id: int, temperature: float) -> bool:
-        client = self.get_client(device_id)
-        if client is None:
-            return False
-        client.publish_comfortable_temperature(temperature)
-        return True
-
-    async def set_temp_time_control(self, device_id: int, enabled: bool) -> bool:
-        client = self.get_client(device_id)
-        if client is None:
-            return False
-        client.publish_temp_time_control(enabled)
-        return True
-
-    async def set_auto_dst(self, device_id: int, enabled: bool) -> bool:
-        client = self.get_client(device_id)
-        if client is None:
-            return False
-        client.publish_auto_dst(enabled)
-        return True
-
-    async def set_timezone(self, device_id: int, timezone_index: int) -> bool:
-        client = self.get_client(device_id)
-        if client is None:
-            return False
-        client.publish_timezone(timezone_index)
         return True
 
     async def write_program(self, device_id: int, program_data: bytes) -> bool:

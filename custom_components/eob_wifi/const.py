@@ -125,29 +125,13 @@ MSG_TYPE_RESPONSE_ERROR_WRONG = (0x40, 0x03)
 # TS11 Therm settings (inner msg types in multi-response)
 MSG_TYPE_THERM_ATTENUATION_TEMP = (0x30, 0x0D)
 MSG_TYPE_THERM_COMFORTABLE_TEMP = (0x30, 0x0E)
-MSG_TYPE_THERM_TEMP_TIME_CONTROL = (0x30, 0x0F)
-MSG_TYPE_THERM_AUTO_DST = (0x30, 0x10)
-MSG_TYPE_THERM_TIMEZONE = (0x30, 0x11)
-MSG_TYPE_THERM_WRITE_SETTINGS = (0x10, 0x0D)
 
 # Program management (weekly schedule)
 MSG_TYPE_PROGRAM_READ = (0x20, 0x03)
 MSG_TYPE_PROGRAM_WRITE = (0x20, 0x06)
-
-# Settings group
-MSG_TYPE_SETTINGS_READ = (0x30, 0x30)
-MSG_TYPE_SETTINGS_WRITE = (0x30, 0x31)
 
 # Attenuation / comfortable temperature range
 TEMP_MIN = 3.0
 TEMP_MAX = 39.0
 ATTENUATION_TEMP_DEFAULT = 21.0
 COMFORTABLE_TEMP_DEFAULT = 30.5
-
-# Timezone options for TS11 Therm
-TIMEZONE_OPTIONS = [
-    "UTC-12", "UTC-11", "UTC-10", "UTC-9", "UTC-8", "UTC-7",
-    "UTC-6", "UTC-5", "UTC-4", "UTC-3", "UTC-2", "UTC-1",
-    "UTC", "UTC+1", "UTC+2", "UTC+3", "UTC+4", "UTC+5",
-    "UTC+6", "UTC+7", "UTC+8", "UTC+9", "UTC+10", "UTC+11", "UTC+12",
-]

@@ -1,4 +1,4 @@
-"""Number entities for EOB WiFi devices - TS11 Therm settings."""
+"""Number entities for EOB WiFi devices - TS11 Therm settings (read-only)."""
 from __future__ import annotations
 
 import logging
@@ -50,6 +50,7 @@ class _EOBNumberBase(CoordinatorEntity, NumberEntity):
     _attr_native_step = 0.5
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_mode = NumberMode.SLIDER
+    _attr_translation_key = None
 
     def __init__(
         self, coordinator: EOBWifiCoordinator, device: dict
@@ -92,8 +93,6 @@ class _EOBNumberBase(CoordinatorEntity, NumberEntity):
 
 
 class EOBAttenuationTemperature(_EOBNumberBase):
-    _attr_unique_id = "eob_wifi_attenuation_temperature_{}"
-    _attr_translation_key = "attenuation_temperature"
 
     def __init__(
         self, coordinator: EOBWifiCoordinator, device: dict
@@ -101,27 +100,19 @@ class EOBAttenuationTemperature(_EOBNumberBase):
         super().__init__(coordinator, device)
         self._attr_unique_id = f"eob_wifi_attenuation_temperature_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Attenuation Temperature"
+        self._attr_native_value = ATTENUATION_TEMP_DEFAULT
 
     @property
     def native_value(self) -> float | None:
         settings = self._get_therm_settings()
         val = settings.get("attenuationTemperature")
-        return self._to_float(val)
-
-    async def async_set_native_value(self, value: float) -> None:
-        mqtt = self.coordinator.mqtt_manager
-        ok = await mqtt.set_attenuation_temperature(self._device_id, value)
-        if ok:
-            d = self._device
-            if d is not None:
-                d.setdefault("thermSettings", {})["attenuationTemperature"] = value
-            self.async_write_ha_state()
-            await self.coordinator.async_request_refresh()
+        result = self._to_float(val)
+        if result is not None:
+            self._attr_native_value = result
+        return self._attr_native_value
 
 
 class EOBComfortableTemperature(_EOBNumberBase):
-    _attr_unique_id = "eob_wifi_comfortable_temperature_{}"
-    _attr_translation_key = "comfortable_temperature"
 
     def __init__(
         self, coordinator: EOBWifiCoordinator, device: dict
@@ -129,19 +120,13 @@ class EOBComfortableTemperature(_EOBNumberBase):
         super().__init__(coordinator, device)
         self._attr_unique_id = f"eob_wifi_comfortable_temperature_{self._device_id}"
         self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Comfortable Temperature"
+        self._attr_native_value = COMFORTABLE_TEMP_DEFAULT
 
     @property
     def native_value(self) -> float | None:
         settings = self._get_therm_settings()
         val = settings.get("comfortableTemperature")
-        return self._to_float(val)
-
-    async def async_set_native_value(self, value: float) -> None:
-        mqtt = self.coordinator.mqtt_manager
-        ok = await mqtt.set_comfortable_temperature(self._device_id, value)
-        if ok:
-            d = self._device
-            if d is not None:
-                d.setdefault("thermSettings", {})["comfortableTemperature"] = value
-            self.async_write_ha_state()
-            await self.coordinator.async_request_refresh()
+        result = self._to_float(val)
+        if result is not None:
+            self._attr_native_value = result
+        return self._attr_native_value
