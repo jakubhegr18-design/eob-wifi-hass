@@ -126,6 +126,10 @@ MSG_TYPE_RESPONSE_ERROR_WRONG = (0x40, 0x03)
 MSG_TYPE_THERM_ATTENUATION_TEMP = (0x30, 0x0D)
 MSG_TYPE_THERM_COMFORTABLE_TEMP = (0x30, 0x0E)
 
+# TODO: TS11 Therm timezone support (UTC offset + auto DST) requires HAR capture
+# of the official app when changing timezone settings to learn the write protocol.
+# Fields 0x0F/0x10/0x11 are currently neither read nor written.
+
 # Program management (weekly schedule)
 MSG_TYPE_PROGRAM_READ = (0x20, 0x03)
 MSG_TYPE_PROGRAM_WRITE = (0x20, 0x06)
