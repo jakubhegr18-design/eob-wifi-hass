@@ -170,28 +170,23 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
         therm = decode_therm_status(payload) if payload else {}
         if therm:
             device.setdefault("thermData", {}).update(therm)
+            therm_settings = device.setdefault("thermSettings", {})
+            therm_data = device.get("thermData", {})
+            if "unknown_3" in therm_data:
+                therm_settings["attenuationTemperature"] = therm_data["unknown_3"] / 2.0
+            if "unknown_4" in therm_data:
+                therm_settings["comfortableTemperature"] = therm_data["unknown_4"] / 2.0
             LOGGER.debug(
                 "MQTT->thermData for %s: actualTemp=%.1f desiredTemp=%.1f "
-                "unknown_2=0x%02X unknown_3=0x%02X unknown_4=0x%02X raw=%s",
+                "attenuation=%.1f comfortable=%.1f raw=%s",
                 device.get("name"),
                 therm.get("actualTemp"), therm.get("desiredTemp"),
-                payload[2] if len(payload) > 2 else 0,
-                payload[3] if len(payload) > 3 else 0,
-                payload[4] if len(payload) > 4 else 0,
+                therm_settings.get("attenuationTemperature", 0),
+                therm_settings.get("comfortableTemperature", 0),
                 payload.hex()
             )
 
         therm_settings = device.setdefault("thermSettings", {})
-
-        key_0d = (0x30 << 8) | 0x0D
-        payload = mqtt_state.get(key_0d)
-        if payload and len(payload) >= 1:
-            therm_settings["attenuationTemperature"] = payload[0] / 2
-
-        key_0e = (0x30 << 8) | 0x0E
-        payload = mqtt_state.get(key_0e)
-        if payload and len(payload) >= 1:
-            therm_settings["comfortableTemperature"] = payload[0] / 2
 
         key_0f = (0x30 << 8) | 0x0F
         payload = mqtt_state.get(key_0f)
