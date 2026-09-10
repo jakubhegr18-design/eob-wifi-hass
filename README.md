@@ -51,6 +51,14 @@ Integration for devices using the EOB WiFi app.
 
 Entities will be created automatically.
 
+## Releases
+
+- **v1.4.0** — Remove dangerous unverified MQTT publish methods. HAR analysis revealed that attenuation/comfortable temperature, temp time control, auto DST, and timezone writes incorrectly used the thermostat temperature message type `(0x10, 0x0B)`, which could corrupt device state. Removed those writes (entities now read-only where data is available), removed timezone select, temp time control and auto DST switches. Only verified commands remain: relay ON/OFF, thermostat temperature write, and multi-read.
+- **v1.3.1** — Correct attenuation/comfortable temperature parsing from `0x300B` payload (bytes 3 and 4), removed non-existent `0x0D`/`0x0E` fields from multi-read.
+- **v1.3.0** — Full TS11 Therm support. Added number entities (attenuation/comfortable temperature), timezone select (later removed), temp time control and auto DST switches (later removed), weekly program sensor.
+- **v1.2.0** — Periodic MQTT multi-read request for all devices.
+- **v1.1.x** — MQTT protocol fixes based on HAR capture: corrected relay ON/OFF command type, multi-read parsing, isSwitchedOn/isAuto derived from MQTT state.
+
 ## Disclaimer
 
 This is a community integration, not officially supported by Elektrobock. Use at your own risk.
