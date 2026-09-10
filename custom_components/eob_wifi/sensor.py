@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import EOBWifiCoordinator
-from .const import DEVICE_TYPE_NAMES, DEVICE_TYPE_THERMOSTATS, DOMAIN, MANUFACTURER
+from .const import DEVICE_TYPE_NAMES, DEVICE_TYPE_THERMOSTATS, DOMAIN, MANUFACTURER, _is_analog_mode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,9 +30,10 @@ async def async_setup_entry(
     for device in coordinator.devices:
         entities.append(EOBFirmwareSensor(coordinator, device))
         dtype = device.get("deviceType")
-        if dtype in DEVICE_TYPE_THERMOSTATS:
+        if dtype in DEVICE_TYPE_THERMOSTATS or _is_analog_mode(device):
             entities.append(EOBTemperatureSensor(coordinator, device))
             entities.append(EOBTargetTemperatureSensor(coordinator, device))
+            entities.append(EOBWeeklyProgramSensor(coordinator, device))
     if entities:
         async_add_entities(entities)
 
@@ -155,3 +156,75 @@ class EOBTargetTemperatureSensor(CoordinatorEntity, SensorEntity):
         if not isinstance(therm, dict):
             return None
         return therm.get("desiredTemp")
+
+
+class EOBWeeklyProgramSensor(CoordinatorEntity, SensorEntity):
+
+    def __init__(
+        self, coordinator: EOBWifiCoordinator, device: dict
+    ) -> None:
+        super().__init__(coordinator)
+        self._device_id = device.get("deviceId")
+        self._attr_unique_id = f"eob_wifi_program_{self._device_id}"
+        self._attr_name = f"{device.get('name', f'EOB {self._device_id}')} Weekly Program"
+        self._attr_icon = "mdi:calendar-clock"
+        dtype = device.get("deviceType")
+        self._attr_device_info = dr.DeviceInfo(
+            identifiers={(DOMAIN, str(self._device_id))},
+            name=device.get("name", f"EOB {self._device_id}"),
+            manufacturer=MANUFACTURER,
+            model=DEVICE_TYPE_NAMES.get(dtype, f"Type {dtype}"),
+            sw_version=device.get("firmwareVersionStringFromDevice"),
+        )
+
+    @property
+    def _device(self) -> dict | None:
+        if not self.coordinator.data:
+            return None
+        for d in self.coordinator.data.get("devices", []):
+            if d.get("deviceId") == self._device_id:
+                return d
+        return None
+
+    @property
+    def native_value(self) -> str | None:
+        d = self._device
+        if not d:
+            return None
+        therm = d.get("thermData")
+        if not isinstance(therm, dict):
+            return None
+        program_list = therm.get("programList", [])
+        if not program_list:
+            return "No programs"
+        total_slots = sum(len(day.get("slots", [])) for day in program_list)
+        active_days = sum(1 for day in program_list if day.get("slots"))
+        return f"{active_days} days, {total_slots} slots"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        d = self._device
+        if not d:
+            return {}
+        therm = d.get("thermData")
+        if not isinstance(therm, dict):
+            return {}
+        program_list = therm.get("programList", [])
+        if not program_list:
+            return {}
+
+        attrs = {}
+        for day_info in program_list:
+            day = day_info.get("day", "?")
+            slots = day_info.get("slots", [])
+            if slots:
+                attrs[day] = [
+                    {"time": s.get("time"), "temp": s.get("temperature")}
+                    for s in slots
+                ]
+
+        raw = therm.get("programs")
+        if raw:
+            attrs["raw_hex"] = raw
+
+        return attrs

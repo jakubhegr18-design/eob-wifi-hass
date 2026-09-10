@@ -20,7 +20,13 @@ from .const import (
 )
 from .mqtt_manager import MqttManager, decode_therm_status
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [
+    Platform.CLIMATE,
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.NUMBER,
+    Platform.SELECT,
+]
 
 SCAN_INTERVAL = timedelta(seconds=60)
 
@@ -165,7 +171,7 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
         if therm:
             device.setdefault("thermData", {}).update(therm)
             LOGGER.debug(
-                "MQTT→thermData for %s: actualTemp=%.1f desiredTemp=%.1f "
+                "MQTT->thermData for %s: actualTemp=%.1f desiredTemp=%.1f "
                 "unknown_2=0x%02X unknown_3=0x%02X unknown_4=0x%02X raw=%s",
                 device.get("name"),
                 therm.get("actualTemp"), therm.get("desiredTemp"),
@@ -174,5 +180,80 @@ class EOBWifiCoordinator(DataUpdateCoordinator):
                 payload[4] if len(payload) > 4 else 0,
                 payload.hex()
             )
+
+        therm_settings = device.setdefault("thermSettings", {})
+
+        key_0d = (0x30 << 8) | 0x0D
+        payload = mqtt_state.get(key_0d)
+        if payload and len(payload) >= 1:
+            therm_settings["attenuationTemperature"] = payload[0] / 2
+
+        key_0e = (0x30 << 8) | 0x0E
+        payload = mqtt_state.get(key_0e)
+        if payload and len(payload) >= 1:
+            therm_settings["comfortableTemperature"] = payload[0] / 2
+
+        key_0f = (0x30 << 8) | 0x0F
+        payload = mqtt_state.get(key_0f)
+        if payload and len(payload) >= 1:
+            therm_settings["isAnalogMode"] = bool(payload[0])
+
+        key_10 = (0x30 << 8) | 0x10
+        payload = mqtt_state.get(key_10)
+        if payload and len(payload) >= 1:
+            therm_settings["autoSummerTimeChange"] = bool(payload[0])
+
+        key_11 = (0x30 << 8) | 0x11
+        payload = mqtt_state.get(key_11)
+        if payload and len(payload) >= 1:
+            therm_settings["timeZone"] = payload[0]
+
+        key_20 = (0x20 << 8) | 0x03
+        payload = mqtt_state.get(key_20)
+        if payload:
+            device.setdefault("thermData", {})["programs"] = payload.hex()
+            device["thermData"]["programList"] = self._parse_weekly_programs(payload)
+
+    @staticmethod
+    def _parse_weekly_programs(data: bytes) -> list[dict]:
+        """Parse weekly program bytes into list of day schedules.
+        
+        Expected format: 7 days, each day has N time/temp pairs.
+        Each pair: 2 bytes (time_minutes_hi, time_minutes_lo, temp_byte)
+        """
+        programs = []
+        if not data or len(data) < 2:
+            return programs
+
+        offset = 0
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+        for day_idx in range(7):
+            if offset >= len(data):
+                programs.append({"day": day_names[day_idx], "slots": []})
+                continue
+
+            num_slots = data[offset] if offset < len(data) else 0
+            offset += 1
+            slots = []
+
+            for _ in range(num_slots):
+                if offset + 2 > len(data):
+                    break
+                time_minutes = (data[offset] << 8) | data[offset + 1]
+                offset += 2
+                temp = data[offset] / 2 if offset < len(data) else 0
+                offset += 1
+                hours = time_minutes // 60
+                minutes = time_minutes % 60
+                slots.append({
+                    "time": f"{hours:02d}:{minutes:02d}",
+                    "time_minutes": time_minutes,
+                    "temperature": temp,
+                })
+
+            programs.append({"day": day_names[day_idx], "slots": slots})
+
+        return programs
 
 
