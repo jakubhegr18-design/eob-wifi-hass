@@ -11,7 +11,7 @@
 - **TS11 Therm** (deviceVariant=3) — fully supported
 - TS11 Socket, U2, PT14 — partially supported or not yet supported
 
-> **Note:** This integration is currently optimized for TS11 Therm (analog mode thermostat). Other device types may not work or only partially work. Full support for additional devices is planned for future releases.
+> **Note:** This integration is currently optimized for TS11 Therm (analog mode thermostat). Other device types may not work or only partially work. Full support for additional devices is  NOT planned for future releases.
 
 ## Description
 
